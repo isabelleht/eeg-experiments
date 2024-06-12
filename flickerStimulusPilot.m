@@ -1,8 +1,8 @@
-%% SSVEP flicker stimulus test experiment 
+% Written by IHT June 2024
 
-sca;
-close all;
-clear;
+%% --- SSVEP flicker stimulus pilot experiment --- %%
+
+clear all;
 
 % Skip internal self-tests and calibrations
 Screen('Preference', 'SkipSyncTests', 1);
@@ -10,64 +10,122 @@ Screen('Preference', 'SkipSyncTests', 1);
 % Setup PTB 
 PsychDefaultSetup(2);
 
-% Set screen to the external monitor
+% Set the screen number to external monitor (if there is one)    
 screenNumber = max(Screen('Screens'));
 
-% Define stimulus/screen colour to use
+% Define black, white and grey
 white = WhiteIndex(screenNumber);
-grey = white / 2;
-
+grey = white / 2;  
+ 
 % Open the screen
-[window, windowRect] = PsychImaging('OpenWindow', screenNumber, grey, [], 32, 2, [], [], kPsychNeed32BPCFloat);
+[window, windowRect] = PsychImaging('OpenWindow', screenNumber, grey, ...
+    [], 32, 2, [], [],  kPsychNeed32BPCFloat);
 
-%% Gabor properties
+%% --- Gabor information --- %%
 
-% Where to draw the Gabor
-gaborDimPix = windowRect(4) / 2;
+% Dimension of region where gabor is drawn
+gaborDimPix = windowRect(4) / 2;    % in pixels
+ 
+% Sigma of gaussian
+sigma = gaborDimPix / 7;    % size of gaussian envelope = gabor patch size
 
-% Sigma of Gaussian
-sigma = gaborDimPix / 7;
-
-% Parameters
+% Gabor parameters
 orientation = 0;
-numCycles = 5; %(b&w per pixel)
-freq = numCycles / gaborDimPix;
-phase = 0;
-contrast = 0.8;
-aspectRatio = 1.0;
+contrast = 1;
+aspectRatio = 1.0;    % shape of patch, <1 wide oval, 1 = circle, >1 tall oval
+phase = 0; 
+
+% Define spatial frequency (cycles/pixel)
+numCycles = 8;    % one cycle = one black and one white lobe
+freq = numCycles / gaborDimPix;    
 
 % Build a procedural gabor texture
-backgroundOffset = [0.5 0.5 0.5 0.0];
-disableNorm = 1;
-preContrastMultiplier = 0.5;
-gabortex = CreateProceduralGabor(window, gaborDimPix, gaborDimPix, [], backgroundOffset, disableNorm, preContrastMultiplier);
+backgroundOffset = [0.5 0.5 0.5 0.0];    % grey
+disableNorm = 1;    % 1 = normalisation is disabled
+preContrastMultiplier = 0.5;    % <1 reduced cont, =1 unchanged, >1 increase
+gabortex = CreateProceduralGabor(window, gaborDimPix, gaborDimPix, [],...
+    backgroundOffset, disableNorm, preContrastMultiplier);
 
-% Randomize the phase of the Gabors and make a properties matrix.
+% Randomise the phase of the gabors and make a properties matrix
 propertiesMat = [phase, freq, sigma, contrast, aspectRatio, 0, 0, 0];
 
+%% --- Draw stimuli --- %%
 
-%% Draw stuff - button press to exit
-
-% Calculate positions for the two Gabors
+% Calculate the x and y coordinates for the center of the screen
 centerX = windowRect(3) / 2;
 centerY = windowRect(4) / 2;
-gaborSpacing = 100; % Adjust this value as needed
 
-leftGaborX = centerX - gaborSpacing;
-rightGaborX = centerX + gaborSpacing;
+% Define position for left gabor
+gaborLeft = [centerX - 1.25 * gaborDimPix, centerY - 0.5 * gaborDimPix, ...
+    centerX - 0.25 * gaborDimPix, centerY + 0.5 * gaborDimPix];
 
-% Draw left&right Gabors
-Screen('DrawTextures', window, gabortex, [], [leftGaborX, centerY], ...
-    orientation, [], [], [], kPsychDontDoRotation, propertiesMat);
-Screen('DrawTextures', window, gabortex, [], [rightGaborX, centerY], ...
-    orientation, [], [], [], kPsychDontDoRotation, propertiesMat);
+% Define position for right gabor
+gaborRight = [centerX + 0.25 * gaborDimPix, centerY - 0.5 * gaborDimPix, ...
+    centerX + 1.25 * gaborDimPix, centerY + 0.5 * gaborDimPix];
+  
+% Draw left gabor
+Screen('DrawTextures', window, gabortex, [], gaborLeft,  orientation, ...
+    [], [], [], [], kPsychDontDoRotation, propertiesMat');
 
-% Flip to the screen
-Screen('Flip', window);
+% Draw right gabor
+Screen('DrawTextures', window, gabortex, [], gaborRight,orientation, ...
+    [], [], [], [], kPsychDontDoRotation, propertiesMat');  
 
-% Wait for button press to exit
+% Add fixation dot
+fixationColor = [1 0 0];    % colour (red)
+fixationSize = 7; 
+
+%% --- Flicker the gabors on and off --- %%
+
+% Define flicker parameters (will play around with these)
+flickerFreqLeft = 2;    % in Hz
+flickerFreqRight = 1;    % in Hz
+numFlickers = 20;    % total on AND off cycles (on+off=1)
+
+% Calculate duration of one cycle (on and off)
+cycleDurationLeft = 1 / flickerFreqLeft;
+cycleDurationRight = 1 / flickerFreqRight;
+
+% Calculate total duration of the flickering
+totalDuration = numFlickers / flickerFreqLeft;
+
+startTime = GetSecs;    % PTB uses GetSecs to time gabor's on/off phase
+while GetSecs - startTime < totalDuration
+    
+    [keyIsDown, ~, ~] = KbCheck;    % Lets you exit with key press at any time
+    if keyIsDown
+        break;
+    end
+    
+    currentTime = GetSecs - startTime;    % Get current time
+    
+    % Calculate current phase of flicker for each gabor
+    phaseLeft = mod(currentTime, cycleDurationLeft) / cycleDurationLeft;
+    phaseRight = mod(currentTime, cycleDurationRight) / cycleDurationRight;
+    
+    % Draw left gabor during "on" phase
+    if phaseLeft < 0.5
+        Screen('DrawTextures', window, gabortex, [], gaborLeft, orientation, ...
+            [], [], [], [], kPsychDontDoRotation, propertiesMat');
+    end
+    
+    % Draw right gabor during "on" phase
+    if phaseRight < 0.5
+        Screen('DrawTextures', window, gabortex, [], gaborRight, orientation, ...
+            [], [], [], [], kPsychDontDoRotation, propertiesMat');
+    end
+    
+    % Keep fixation dot on 
+    Screen('DrawDots', window, [centerX centerY], fixationSize, fixationColor, [], 2);
+    
+    % Flip to the screen
+    Screen('Flip', window);
+end
+
+%% Exit PTB
+
+% Wait for a button press to exit
 KbStrokeWait;
 
 % Clear screen
-sca;
-
+sca; 

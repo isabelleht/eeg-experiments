@@ -30,7 +30,8 @@ gaborDimPix = windowRect(4) / 2;    % in pixels
 sigma = gaborDimPix / 7;    % size of gaussian envelope = gabor patch size
 
 % Gabor parameters
-orientation = 0;
+orientationLeft = 0;    % left gabor orientation (deg)
+orientationRight = 0;    % right gabor orientation (deg)
 contrast = 1;
 aspectRatio = 1.0;    % shape of patch, <1 wide oval, 1 = circle, >1 tall oval
 phase = 0; 
@@ -64,11 +65,11 @@ gaborRight = [centerX + 0.25 * gaborDimPix, centerY - 0.5 * gaborDimPix, ...
     centerX + 1.25 * gaborDimPix, centerY + 0.5 * gaborDimPix];
   
 % Draw left gabor
-Screen('DrawTextures', window, gabortex, [], gaborLeft,  orientation, ...
+Screen('DrawTextures', window, gabortex, [], gaborLeft, orientationLeft, ...
     [], [], [], [], kPsychDontDoRotation, propertiesMat');
 
 % Draw right gabor
-Screen('DrawTextures', window, gabortex, [], gaborRight,orientation, ...
+Screen('DrawTextures', window, gabortex, [], gaborRight, orientationRight, ...
     [], [], [], [], kPsychDontDoRotation, propertiesMat');  
 
 % Add fixation dot
@@ -89,7 +90,7 @@ cycleDurationRight = 1 / flickerFreqRight;
 % Calculate total duration of the flickering
 totalDuration = numFlickers / flickerFreqLeft;
 
-startTime = GetSecs;    % PTB uses GetSecs to time gabor's on/off phase
+startTime = GetSecs;    % PTB uses GetSecs to time gabor on/off phase
 while GetSecs - startTime < totalDuration
     
     [keyIsDown, ~, ~] = KbCheck;    % Lets you exit with key press at any time
@@ -105,13 +106,13 @@ while GetSecs - startTime < totalDuration
     
     % Draw left gabor during "on" phase
     if phaseLeft < 0.5
-        Screen('DrawTextures', window, gabortex, [], gaborLeft, orientation, ...
+        Screen('DrawTextures', window, gabortex, [], gaborLeft, orientationLeft, ...
             [], [], [], [], kPsychDontDoRotation, propertiesMat');
     end
     
     % Draw right gabor during "on" phase
     if phaseRight < 0.5
-        Screen('DrawTextures', window, gabortex, [], gaborRight, orientation, ...
+        Screen('DrawTextures', window, gabortex, [], gaborRight, orientationRight, ...
             [], [], [], [], kPsychDontDoRotation, propertiesMat');
     end
     
